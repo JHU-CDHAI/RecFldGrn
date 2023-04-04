@@ -3,7 +3,7 @@
 This is a repo to show the idea of `RecFldGrn`, which indicates the `Record-Field-Grain` framework. 
 
 
-* `Record`: A record type can be (1) potiential can have multiple `Field`s (or columns). The records can be multiple. For example, one patient can have multiple `A1C Record`, or `Diagnosis Record`. But one patient cannot have multiple `Age Record`s (Given one index date, in some cases, we can convert `Age` to records, too). In the most case, we treat `Age` as the field for the `Patient Record`, similar to `Race` and `Gender`. 
+* `Record`: A record type can have many *potiential* multiple `Field`s (or columns). The records can be multiple. For example, one patient can have multiple `A1C Record`, or `Diagnosis Record`. But one patient cannot have multiple `Age Record`s (Given one index date, in some cases, we can convert `Age` to records, too). In the most case, we treat `Age` as the field for the `Patient Record`, similar to `Race` and `Gender`. 
 
 * `Field`: A field describes a dimension of a record (It is more like a column). 
 
