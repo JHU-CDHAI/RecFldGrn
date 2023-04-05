@@ -27,6 +27,63 @@ def get_df_rec(attr, path, old_columns, new_columns):
 
 
 
+import pandas as pd
+
+def get_df_rec(attr, path, old_columns, new_columns):
+
+
+    '''
+    Function Name: get_df_rec
+
+    Parameters:
+    - attr: string
+    - path: string
+    - old_columns: list of strings
+    - new_columns: list of strings
+
+    Returns:
+    - df: Pandas DataFrame object
+
+    Description:
+    This function reads a CSV file located at the specified path and returns a processed Pandas DataFrame object. 
+    The DataFrame object is first printed to display the column names. 
+    Then, a new column 'RID' is added to the DataFrame object, which is equal to the index of the DataFrame object. 
+    For each column in old_columns, if it is not already present in the DataFrame object, 
+    a new column with the column name is added to the DataFrame object with all its values set to None. 
+    The DataFrame object is then filtered to only contain the columns in old_columns and renamed using the corresponding column names in new_columns. 
+    A column with a name containing 'DT' is selected from new_columns, 
+    and the values in that column are converted to Pandas datetime objects using the pd.to_datetime() function.
+    The DataFrame object is sorted based on two columns: 
+    'PID' and the datetime column selected in the previous step. 
+    Finally, the DataFrame object is filtered to exclude any rows where the value of 'ECID' column is 0, 
+    and the resulting DataFrame object is returned.
+
+
+    '''
+    # Read CSV file into a Pandas DataFrame object
+    df = pd.read_csv(path, low_memory=False)
+    # Print the column names of the DataFrame object
+    print(df.columns)
+    # Add a new column 'RID' to the DataFrame object, which is equal to the index of the DataFrame object
+    df['RID'] = df.index
+    # For each column in old_columns, if it is not already present in the DataFrame object, a new column with the column name is added to the DataFrame object with all its values set to None
+    for i in old_columns:
+        if i not in df.columns:
+            df[i] = None
+    # Filter the DataFrame object to only contain the columns in old_columns and rename the columns using the corresponding column names in new_columns
+    df = df[old_columns]
+    df.columns = new_columns
+    # Select a column with a name containing 'DT' from new_columns and convert its values to Pandas datetime objects
+    DT_col = [i for i in new_columns if 'DT' in i][0]
+    df[DT_col] = pd.to_datetime(df[DT_col])
+    # Sort the DataFrame object based on two columns: 'PID' and the datetime column selected in the previous step
+    df = df.sort_values(['PID', DT_col]).reset_index(drop=True)
+    # Filter the DataFrame object to exclude any rows where the value of 'ECID' column is 0
+    df = df[df['ECID'] != 0].reset_index(drop=True)
+    # Return the resulting DataFrame object
+    return df
+
+
 def convert_PID_to_PIDgroup(x, RANGE_SIZE):
     int_value = int(x.replace('P', ''))
     range_size = RANGE_SIZE
@@ -79,20 +136,28 @@ def get_dfx_from_buffer(PID, DataName, data_folder, RANGE_SIZE, BUCKET_buffer):
 
 
 class PatientDP(object):
+
+    '''
+    PatientDP: stands for the Patient Data Points. 
+
+    one instance is a patient.
+
+    the instance of the patient could quickly the his/her record information by using `get_df_rec`.
+
+    '''
     BUCKET_buffer = {}
-    
-    
+
     def __init__(self, PID, data_folder, RANGE_SIZE):
         self.PID = PID
         self.data_folder = data_folder
         self.df_rec_dict = {}
         self.RANGE_SIZE = RANGE_SIZE
         
-        
     def get_df_rec(self, DataName):
+        '''
+        DataName: the name of the record, like: P, EC, BMI, PN, PNSect, etc.
+        '''
         if DataName not in self.df_rec_dict:
-           # df = load_field_data(self.PID, DataName, self.data_folder)
-            
             dfx, BUCKET_buffer = get_dfx_from_buffer(self.PID, DataName, 
                                                      self.data_folder, 
                                                      self.RANGE_SIZE, 
