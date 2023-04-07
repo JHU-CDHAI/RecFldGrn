@@ -5,7 +5,6 @@ import os
 
 ############## <s>
 def generate_grain_vocab_info(s):
-
     '''
         s: a Series (or a column of a dataframe) of all rec@fld value's grain_list.
             eg. grain_list: a list of tokens from raw sentence. 
@@ -49,7 +48,6 @@ def get_compressed_df(df_rec, full_recfldgrn_name, prefix_ids):
     df_rec_new = df_rec_new.rename(columns = {full_recfldgrn_name: full_recfldgrn_name_new})
     df_rec_new = df_rec_new[prefix_ids + [full_recfldgrn_name_new]]
     return df_rec_new, full_recfldgrn_name_new, prefix_ids_new
-
 
 
 def get_highorder_input_idx(df, recfield2grain, 
