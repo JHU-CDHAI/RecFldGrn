@@ -6,37 +6,6 @@ from .datapoint import load_df_data_from_folder
 import itertools
 
 
-def get_df_whole_from_settings(RecLevel, RecLevelID, 
-                               SynFld, GrnName, Rec2FldList_Dict, 
-                               prefix_ids, focal_ids, rec_folder,
-                               **kwargs
-                              ):
-    df_base = load_df_data_from_folder(os.path.join(rec_folder, RecLevel))[prefix_ids + focal_ids]
-
-
-    L = []
-    for RecName, FldList in Rec2FldList_Dict.items():
-        full_cols = prefix_ids + focal_ids + FldList
-        df_whole = load_df_data_from_folder(os.path.join(rec_folder, RecName))[full_cols]
-
-        if RecLevelID not in df_whole.columns:
-            print('Use this...')
-            on_cols = [i for i in df_base.columns if i in df_whole.columns]
-            df_whole = pd.merge(df_base, df_whole, on = on_cols, how = 'left')
-
-        df_input_groups = pd.DataFrame([{RecLevelID: RecLevelIDValue, RecName: df_input} 
-                                         for RecLevelIDValue, df_input in df_whole.groupby(RecLevelID)])
-        L.append(df_input_groups)
-
-    # Merge the dataframes in the list using reduce
-    df_whole = reduce(lambda left, right: pd.merge(left, right, on=RecLevelID), L)
-    
-    # df_base
-    df_whole = pd.merge(df_base, df_whole, on = focal_ids, how = 'left') 
-    
-    return df_whole
-
-
 def func_convert_Num_factory(start, end, Min, Max, scale):
     
     def func_convert_NUMgrn(v):
