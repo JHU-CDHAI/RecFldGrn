@@ -118,6 +118,14 @@ def get_df_whole_from_settings(RecName_Chain,
     
     # 3. get df_whole
     df_whole = pd.merge(df_prefix, df_data, on = RecLevelID, how = 'left')
+
+    for Rec in RecName_Chain:
+        RID = Rec + 'ID'
+        # df_whole.loc[df_whole[RID].isna(), RID] = pd.Series(df_whole[RID].isna().sum() * [1]).cumsum()
+        s = 'M' + pd.Series(df_whole.index).astype(str)
+        df_whole[RID] = df_whole[RID].fillna(s).astype(str)
+    
+    
     return df_whole
 
 
@@ -170,5 +178,14 @@ def get_df_individual_from_settings(RecName_Chain,
     
     # 3. get df_whole
     df_whole = pd.merge(df_prefix, df_data, on = RecLevelID, how = 'left')
+
+
+    for Rec in RecName_Chain:
+        RID = Rec + 'ID'
+        # df_whole.loc[df_whole[RID].isna(), RID] = pd.Series(df_whole[RID].isna().sum() * [1]).cumsum()
+        s = 'M' + pd.Series(df_whole.index).astype(str)
+        df_whole[RID] = df_whole[RID].fillna(s).astype(str)
+    
+
     return df_whole
     
