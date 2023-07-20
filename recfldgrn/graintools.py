@@ -118,44 +118,24 @@ def get_highorder_input_idx(df, recfldgrn_sfx, prefix_ids, focal_ids):
     return df_p
 
 
-def generate_EmbedDict_from_processed_df_whole(df_whole, recfldgrn):
+def generate_EmbedDict_from_processed_df_whole(df_whole, recfldgrn, sfx_list = ['tkn', 'tpc']):
     EmbedDict = {}
     
-    # tkn (key)
-    sfx = 'tkn'
-    embed_type = 'CateEmbed'
-    recfldgrn_sfx = f'{recfldgrn}_{sfx}'
-    # print(recfldgrn_sfx)
-    s = df_whole[recfldgrn_sfx] 
-    Vocab = generate_grain_vocab_info(s) 
-    v2idx = Vocab['v2idx']
-    vocab_size = len(v2idx)
-    tknz = None
-    # print(v2idx)
-    d = {'embed_type':embed_type, 
-         'recfldgrn_sfx':recfldgrn_sfx,
-         'vocab_size': vocab_size,
-         'Vocab': Vocab,
-         'tknz': tknz}
-    df_whole[f'{recfldgrn}_{sfx}idx'] =  df_whole[f'{recfldgrn}_{sfx}'].apply(lambda x: [ v2idx[i] for i in x])
-    EmbedDict[sfx] = d
-    
-    # tpc (topic)
-    sfx = 'tpc'
-    embed_type = 'CateEmbed'
-    recfldgrn_sfx = f'{recfldgrn}_{sfx}'
-    # print(recfldgrn_sfx)
-    s = df_whole[recfldgrn_sfx] 
-    Vocab = generate_grain_vocab_info(s) 
-    v2idx = Vocab['v2idx']
-    vocab_size = len(v2idx)
-    # print(v2idx)
-    d = {'embed_type':embed_type, 
-         'recfldgrn_sfx':recfldgrn_sfx,
-         'vocab_size': vocab_size,
-         'Vocab': Vocab,
-         'tknz': tknz}
-
-    df_whole[f'{recfldgrn}_{sfx}idx'] =  df_whole[f'{recfldgrn}_{sfx}'].apply(lambda x: [v2idx[i] for i in x])
-    EmbedDict[sfx] = d
+    for sfx in sfx_list:
+        embed_type = 'CateEmbed'
+        recfldgrn_sfx = f'{recfldgrn}_{sfx}'
+        # print(recfldgrn_sfx)
+        s = df_whole[recfldgrn_sfx] 
+        Vocab = generate_grain_vocab_info(s) 
+        v2idx = Vocab['v2idx']
+        vocab_size = len(v2idx)
+        # print(v2idx)
+        d = {'embed_type':embed_type, 
+             'recfldgrn_sfx':recfldgrn_sfx,
+             'vocab_size': vocab_size,
+             'Vocab': Vocab}
+        
+        df_whole[f'{recfldgrn}_{sfx}idx'] =  df_whole[f'{recfldgrn}_{sfx}'].apply(lambda x: [v2idx[i] for i in x])
+        EmbedDict[sfx] = d
+        
     return df_whole, EmbedDict

@@ -74,19 +74,24 @@ def load_from_pickle(filename):
 
 def get_df_whole_from_settings(RecName_Chain, 
                                RecTableName2FldColumns_Dict, 
-                               rec_folder):
+                               rec_folder, 
+                               RecName_Chain_to_RecName = {}):
    # (1) get df_prefix
-    L= []
+    L = []
 
     RecNameID_Chain = [f'{i}ID' for i in RecName_Chain]
     for idx, RecName in enumerate(RecName_Chain):
-        df = load_df_data_from_folder(os.path.join(rec_folder, RecName)) # [prefix_ids + focal_ids]
-        df = df[RecNameID_Chain[:idx+ 1]]
+        RecName_Full = RecName_Chain_to_RecName.get(RecName, RecName)
+        df = load_df_data_from_folder(os.path.join(rec_folder, RecName_Full)) # [prefix_ids + focal_ids]
+        df = df[RecNameID_Chain[:idx+ 1]].astype(str)
         L.append(df)
 
     df_prefix = reduce(lambda left, right: pd.merge(left, right, how = 'left'), L)
-    # df_prefix
-
+    
+    for RecID in RecNameID_Chain:
+        s = 'M' + pd.Series(df_prefix.index).astype(str)
+        df_prefix[RecID] = df_prefix[RecID].fillna(s)
+        
     # (2) get df_data
     RecLevel = RecName_Chain[-1]
     RecLevelID = f'{RecLevel}ID'
@@ -94,37 +99,33 @@ def get_df_whole_from_settings(RecName_Chain,
     L = []
     for RecName, FldList in RecTableName2FldColumns_Dict.items():
         df = load_df_data_from_folder(os.path.join(rec_folder, RecName))
-        # print(df.columns)
         if FldList == 'ALL': FldList = list(df.columns)
-        
         full_cols = [i for i in RecNameID_Chain if i not in FldList] + FldList
-        # print(full_cols)
         full_cols = [i for i in full_cols if i in df.columns]
-        # print(full_cols)
         df = df[full_cols]
+
+        for RecID in RecNameID_Chain:
+            if RecID in df.columns: df[RecID] = df[RecID].astype(str)
+
         if RecLevelID not in df.columns:
-            # get df_data from above level
-            # on_cols is a subset of RecName_Chain
             on_cols = [i for i in df_prefix.columns if i in df.columns]
             df = pd.merge(df_prefix, df, on = on_cols, how = 'left')
 
         df = pd.DataFrame([{RecLevelID: RecLevelIDValue, RecName: df_input} 
                            for RecLevelIDValue, df_input in df.groupby(RecLevelID)])
         L.append(df)
-
+        
     # Merge the dataframes in the list using reduce
     df_data = reduce(lambda left, right: pd.merge(left, right, on=RecLevelID, how = 'left'), L)
 
-    
     # 3. get df_whole
     df_whole = pd.merge(df_prefix, df_data, on = RecLevelID, how = 'left')
 
-    for Rec in RecName_Chain:
-        RID = Rec + 'ID'
-        # df_whole.loc[df_whole[RID].isna(), RID] = pd.Series(df_whole[RID].isna().sum() * [1]).cumsum()
-        s = 'M' + pd.Series(df_whole.index).astype(str)
-        df_whole[RID] = df_whole[RID].fillna(s).astype(str)
-    
+    for RecName in RecTableName2FldColumns_Dict:
+        ind = df_whole[RecName].isna()
+        columns = df_whole[-ind][RecName].iloc[0].columns
+        df_whole[RecName] = df_whole[RecName].apply(lambda x: x if type(x) == type(pd.DataFrame()) 
+                                                    else pd.DataFrame(columns = columns))
     
     return df_whole
 
@@ -132,20 +133,25 @@ def get_df_whole_from_settings(RecName_Chain,
 
 def get_df_individual_from_settings(RecName_Chain, 
                                     RecTableName2FldColumns_Dict, 
-                                    Pat):
-    # (1) get df_prefix
-    L= []
+                                    Pat, 
+                                    RecName_Chain_to_RecName = {}):
+   # (1) get df_prefix
+    L = []
 
     RecNameID_Chain = [f'{i}ID' for i in RecName_Chain]
     for idx, RecName in enumerate(RecName_Chain):
-        # df = load_df_data_from_folder(os.path.join(rec_folder, RecName)) # [prefix_ids + focal_ids]
-        df = Pat.get_df_rec(RecName)
-        df = df[RecNameID_Chain[:idx+ 1]]
+        RecName_Full = RecName_Chain_to_RecName.get(RecName, RecName)
+        # df = load_df_data_from_folder(os.path.join(rec_folder, RecName_Full)) # [prefix_ids + focal_ids]
+        df = Pat.get_df_rec(RecName_Full)
+        df = df[RecNameID_Chain[:idx+ 1]].astype(str)
         L.append(df)
 
     df_prefix = reduce(lambda left, right: pd.merge(left, right, how = 'left'), L)
-    # df_prefix
-
+    
+    for RecID in RecNameID_Chain:
+        s = 'M' + pd.Series(df_prefix.index).astype(str)
+        df_prefix[RecID] = df_prefix[RecID].fillna(s)
+        
     # (2) get df_data
     RecLevel = RecName_Chain[-1]
     RecLevelID = f'{RecLevel}ID'
@@ -153,39 +159,33 @@ def get_df_individual_from_settings(RecName_Chain,
     L = []
     for RecName, FldList in RecTableName2FldColumns_Dict.items():
         # df = load_df_data_from_folder(os.path.join(rec_folder, RecName))
-        df = Pat.get_df_rec(RecName)
-        # print(df.columns)
+        df = Pat.get_df_rec(RecName_Full)
         if FldList == 'ALL': FldList = list(df.columns)
-        
         full_cols = [i for i in RecNameID_Chain if i not in FldList] + FldList
-        # print(full_cols)
         full_cols = [i for i in full_cols if i in df.columns]
-        # print(full_cols)
         df = df[full_cols]
+
+        for RecID in RecNameID_Chain:
+            if RecID in df.columns: df[RecID] = df[RecID].astype(str)
+
         if RecLevelID not in df.columns:
-            # get df_data from above level
-            # on_cols is a subset of RecName_Chain
             on_cols = [i for i in df_prefix.columns if i in df.columns]
             df = pd.merge(df_prefix, df, on = on_cols, how = 'left')
 
         df = pd.DataFrame([{RecLevelID: RecLevelIDValue, RecName: df_input} 
                            for RecLevelIDValue, df_input in df.groupby(RecLevelID)])
         L.append(df)
-
+        
     # Merge the dataframes in the list using reduce
     df_data = reduce(lambda left, right: pd.merge(left, right, on=RecLevelID, how = 'left'), L)
 
-    
     # 3. get df_whole
     df_whole = pd.merge(df_prefix, df_data, on = RecLevelID, how = 'left')
 
-
-    for Rec in RecName_Chain:
-        RID = Rec + 'ID'
-        # df_whole.loc[df_whole[RID].isna(), RID] = pd.Series(df_whole[RID].isna().sum() * [1]).cumsum()
-        s = 'M' + pd.Series(df_whole.index).astype(str)
-        df_whole[RID] = df_whole[RID].fillna(s).astype(str)
+    for RecName in RecTableName2FldColumns_Dict:
+        ind = df_whole[RecName].isna()
+        columns = df_whole[-ind][RecName].iloc[0].columns
+        df_whole[RecName] = df_whole[RecName].apply(lambda x: x if type(x) == type(pd.DataFrame()) 
+                                                    else pd.DataFrame(columns = columns))
     
-
     return df_whole
-    
