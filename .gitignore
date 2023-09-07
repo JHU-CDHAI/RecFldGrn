@@ -18,3 +18,4 @@ __pycache__/*
 # *.p
 */L2
 .DS_Store
+*.recfldgrn.egg-info/*
