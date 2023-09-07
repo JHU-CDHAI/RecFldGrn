@@ -83,7 +83,7 @@ def get_df_whole_from_settings(RecName_Chain,
     for idx, RecName in enumerate(RecName_Chain):
         RecName_Full = RecName_Chain_to_RecName.get(RecName, RecName)
         df = load_df_data_from_folder(os.path.join(rec_folder, RecName_Full)) # [prefix_ids + focal_ids]
-        df = df[RecNameID_Chain[:idx+ 1]].astype(str)
+        df = df[RecNameID_Chain[:idx+ 1]].astype(str).drop_duplicates()
         L.append(df)
 
     df_prefix = reduce(lambda left, right: pd.merge(left, right, how = 'left'), L)
@@ -102,7 +102,7 @@ def get_df_whole_from_settings(RecName_Chain,
         if FldList == 'ALL': FldList = list(df.columns)
         full_cols = [i for i in RecNameID_Chain if i not in FldList] + FldList
         full_cols = [i for i in full_cols if i in df.columns]
-        df = df[full_cols]
+        df = df[full_cols].reset_index(drop = True)
 
         for RecID in RecNameID_Chain:
             if RecID in df.columns: df[RecID] = df[RecID].astype(str)
@@ -143,7 +143,7 @@ def get_df_individual_from_settings(RecName_Chain,
         RecName_Full = RecName_Chain_to_RecName.get(RecName, RecName)
         # df = load_df_data_from_folder(os.path.join(rec_folder, RecName_Full)) # [prefix_ids + focal_ids]
         df = Pat.get_df_rec(RecName_Full)
-        df = df[RecNameID_Chain[:idx+ 1]].astype(str)
+        df = df[RecNameID_Chain[:idx+ 1]].astype(str).drop_duplicates()
         L.append(df)
 
     df_prefix = reduce(lambda left, right: pd.merge(left, right, how = 'left'), L)
@@ -159,11 +159,11 @@ def get_df_individual_from_settings(RecName_Chain,
     L = []
     for RecName, FldList in RecTableName2FldColumns_Dict.items():
         # df = load_df_data_from_folder(os.path.join(rec_folder, RecName))
-        df = Pat.get_df_rec(RecName_Full)
+        df = Pat.get_df_rec(RecName)
         if FldList == 'ALL': FldList = list(df.columns)
         full_cols = [i for i in RecNameID_Chain if i not in FldList] + FldList
         full_cols = [i for i in full_cols if i in df.columns]
-        df = df[full_cols]
+        df = df[full_cols].reset_index(drop = True)
 
         for RecID in RecNameID_Chain:
             if RecID in df.columns: df[RecID] = df[RecID].astype(str)
@@ -187,5 +187,82 @@ def get_df_individual_from_settings(RecName_Chain,
         columns = df_whole[-ind][RecName].iloc[0].columns
         df_whole[RecName] = df_whole[RecName].apply(lambda x: x if type(x) == type(pd.DataFrame()) 
                                                     else pd.DataFrame(columns = columns))
+    
+    return df_whole
+
+
+def get_df_bucket_from_settings(bucket_file, RecChain_ARGS, RecInfo_ARGS):
+    # 1 ----------------- get df_prefix
+    L = []
+    # RecNameID_Chain = [f'{i}ID' for i in RecName_Chain]
+    RecNameID_Chain = [i for i in RecChain_ARGS]
+    for idx, RID in enumerate(RecChain_ARGS):
+        RecInfo = RecChain_ARGS[RID]
+        # folder, Name = RecName_Chain_To_RecFolderName.get(RecName, (rec_folder, RecName))
+        folder, RecName = RecInfo['folder'], RecInfo['RecName']
+        df = pd.read_pickle(os.path.join(folder, RecName, bucket_file))
+        df = df[RecNameID_Chain[:idx+ 1]].astype(str).drop_duplicates()
+        L.append(df)
+        
+    df_prefix = reduce(lambda left, right: pd.merge(left, right, how = 'left'), L)
+    # print(df_prefix)
+    
+    # fill the missing Rec with missing ID.
+    for RID in RecNameID_Chain:
+        s = 'M' + pd.Series(df_prefix.index).astype(str)
+        df_prefix[RID] = df_prefix[RID].fillna(s)
+
+    
+    # 2 ----------------- get df_data
+    # RecLevel = RecNameID_Chain[-1][:-2]
+    # RecLevelID = f'{RecLevel}ID'
+    RecLevelID = RecNameID_Chain[-1]
+
+    L = []
+    # for RecName, FldList in RecTableName2FldColumns_Dict.items():
+    for idx, RecElmt in enumerate(RecInfo_ARGS):
+        RecElmt_ARGS = RecInfo_ARGS[RecElmt]
+        folder = RecElmt_ARGS['folder']
+        RecName = RecElmt_ARGS['RecName']
+        FldList = RecElmt_ARGS['Columns']
+        
+        # read df
+        path = os.path.join(folder, RecName, bucket_file)
+        if not os.path.exists(path): print(f'empty path: {path}'); continue
+        df = pd.read_pickle(path)
+        
+        # select columns
+        if FldList == 'ALL': FldList = list(df.columns)
+        full_cols = [i for i in RecNameID_Chain if i not in FldList] + FldList
+        full_cols = [i for i in full_cols if i in df.columns]
+        df = df[full_cols].reset_index(drop = True)
+        
+        # update columns
+        for RecID in RecNameID_Chain:
+            if RecID in df.columns: df[RecID] = df[RecID].astype(str)
+
+        # downstream df_data with df_prefix if RecLevelID is not in ID
+        # eg: RecLevelID is Encounter-level, but df is Patient-level.
+        if RecLevelID not in df.columns:
+            on_cols = [i for i in df_prefix.columns if i in df.columns]
+            df = pd.merge(df_prefix, df, on = on_cols, how = 'left')
+
+        # change df to RecLevelID for each row.
+        df = pd.DataFrame([{RecLevelID: RecLevelIDValue, RecElmt: df_input} 
+                           for RecLevelIDValue, df_input in df.groupby(RecLevelID)])
+        
+        L.append(df)
+        
+    # uncomment this is you want to check
+    # for df in L: print(df.shape)
+    
+    # 3 ----------------- get df_data
+    # Merge the dataframes in the list using reduce, here we should use OUTER!
+    # <!!!!!!!!!!!!!!!! here is the data only, so we use outer !!!!!!!!!!!!!!!!>
+    df_data = reduce(lambda left, right: pd.merge(left, right, on=RecLevelID, how = 'outer'), L)
+
+    # 4 ----------------- get df_whole
+    # <!!!!!!!!!!!!!!!! here we only focus rows in df_prefix, so we use left !!!!!!!!!!!!!!!!>
+    df_whole = pd.merge(df_prefix, df_data, on = RecLevelID, how = 'left')
     
     return df_whole
