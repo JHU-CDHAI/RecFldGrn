@@ -10,6 +10,8 @@ def convert_PID_to_PIDgroup(x, RANGE_SIZE):
     if type(x) == str:
         if 'P' in x:
             int_value = int(x.replace('P', ''))
+        else:
+            int_value = int(x)
     else:
         int_value = int(x)
     range_size = RANGE_SIZE
@@ -20,7 +22,7 @@ def convert_PID_to_PIDgroup(x, RANGE_SIZE):
     return groupname
 
 # write df to folder
-def write_df_to_folders(RecName, data_folder, df, IDNAME, RANGE_SIZE = RANGE_SIZE):
+def write_df_to_folders(data_folder, df, IDNAME, RANGE_SIZE = RANGE_SIZE):
     dfy = df.copy()
     if not os.path.exists(data_folder):
         os.makedirs(data_folder)
@@ -40,9 +42,21 @@ def load_df_data_from_folder(data_folder, **kwargs):
     df = pd.concat([pd.read_pickle(os.path.join(data_folder, i)) for i in file_list if '.p' in i]).reset_index(drop = True)
     return df
 
+
+def write_df_data_with_RecName(df, rec_folder, RecName, IDNAME, RANGE_SIZE = RANGE_SIZE):
+    fullrec_folder = os.path.join(rec_folder, RecName)
+    if not os.path.exists(fullrec_folder): os.makedirs(fullrec_folder)
+
+    dfy = df.copy()
+    dfy['GroupName'] = dfy[IDNAME].apply(lambda x: convert_PID_to_PIDgroup(x , RANGE_SIZE))
+    for groupname, dfx in dfy.groupby('GroupName'):
+        file = os.path.join(fullrec_folder, f'{groupname}.p')
+        dfx = dfx.drop(columns= ['GroupName'])
+        dfx.to_pickle(file)
+
 def load_df_data_with_RecName(rec_folder, RecName):
     data_folder = os.path.join(rec_folder, RecName)
-    file_list = os.listdir(data_folder)
+    file_list = sorted(os.listdir(data_folder))
     df = pd.concat([pd.read_pickle(os.path.join(data_folder, i)) for i in file_list if '.p' in i]).reset_index(drop = True)
     return df
 

@@ -80,10 +80,11 @@ def get_compressed_df(df_rec, full_recfldgrn_name, prefix_ids):
             focal_ids_new: [ECID], current primary key
             full_recfldgrn_name_new: `EC - PrimaryNote - Section - SectSent@Sentence - TkGrn`
     '''
-    CompressParent_ID = prefix_ids[-1] # parent layer's ID which will be used to compress. 
+    CompressParent_ID_list = prefix_ids # parent layer's ID which will be used to compress. 
+    CompressParent_ID = prefix_ids[-1]
     prefix_ids_new = prefix_ids[:-1]   # the new prefix_ids. 
 
-    df_rec_new = pd.DataFrame(df_rec.groupby(CompressParent_ID).apply(lambda x: x.to_dict('list')).to_list())
+    df_rec_new = pd.DataFrame(df_rec.groupby(CompressParent_ID_list).apply(lambda x: x.to_dict('list')).to_list())
 
     for col in prefix_ids: 
         df_rec_new[col] = df_rec_new[col].apply(lambda x: x[0])
